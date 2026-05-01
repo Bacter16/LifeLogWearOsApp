@@ -1,8 +1,9 @@
 package com.lifelog.wear
 
-import retrofit2.http.Body
-import retrofit2.http.POST
 import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.Header
+import retrofit2.http.POST
 
 data class TranscriptRequest(
     val clientEventId: String,
@@ -20,5 +21,8 @@ data class TranscriptResponse(
 
 interface LifeLogApi {
     @POST("api/transcripts")
-    suspend fun sendTranscript(@Body request: TranscriptRequest): Response<TranscriptResponse>
+    suspend fun sendTranscript(
+        @Header("X-Api-Key") apiKey: String,
+        @Body request: TranscriptRequest
+    ): Response<TranscriptResponse>
 }
