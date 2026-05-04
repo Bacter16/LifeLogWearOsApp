@@ -1,18 +1,19 @@
 package com.lifelog.wear
 
 import android.Manifest
+import android.app.RemoteInput
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.wear.input.RemoteInputIntentHelper
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -93,11 +94,13 @@ class MainActivity : ComponentActivity() {
     // ─── Speech Recognition ────────────────────────────────────
 
     private fun startSpeechRecognition() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak your journal entry...")
-        }
+        val intent = RemoteInputIntentHelper.createActionRemoteInputIntent()
+        val remoteInputs: List<RemoteInput> = listOf(
+            RemoteInput.Builder("prompt_text")
+                .setLabel("Speak journal entry")
+                .build()
+        )
+        RemoteInputIntentHelper.putRemoteInputsExtra(intent, remoteInputs)
         startActivityForResult(intent, SPEECH_REQUEST_CODE)
     }
 
@@ -105,9 +108,9 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK) {
-            val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spokenText = results?.get(0)
+        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+            val results = RemoteInput.getResultsFromIntent(data)
+            val spokenText = results?.getCharSequence("prompt_text")?.toString()
             if (!spokenText.isNullOrBlank()) {
                 enqueueTranscript(spokenText)
             } else {
@@ -192,8 +195,8 @@ class MainActivity : ComponentActivity() {
     // ─── Haptics ───────────────────────────────────────────────
 
     private fun vibrateSuccess() {
-        val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        if (vibrator.hasVibrator()) {
+        val vibrator = getSystemService(Vibrator::class.java)
+        if (vibrator != null && vibrator.hasVibrator()) {
             vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }

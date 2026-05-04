@@ -1,7 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp") version "1.9.0-1.0.12"
+    id("com.google.devtools.ksp")
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun lifelogProperty(name: String, defaultValue: String): String {
+    return (project.findProperty(name) as String?)
+        ?: localProperties.getProperty(name)
+        ?: defaultValue
 }
 
 android {
@@ -14,6 +29,17 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "LIFELOG_BASE_URL",
+            "\"${lifelogProperty("LIFELOG_BASE_URL", "http://10.0.2.2:5000/")}\""
+        )
+        buildConfigField(
+            "String",
+            "LIFELOG_API_KEY",
+            "\"${lifelogProperty("LIFELOG_API_KEY", "")}\""
+        )
     }
 
     buildTypes {
@@ -31,6 +57,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -53,4 +80,7 @@ dependencies {
 
     // WorkManager (background sync)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Wear Input (RemoteInputIntentHelper)
+    implementation("androidx.wear:wear-input:1.2.0")
 }
